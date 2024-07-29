@@ -97,59 +97,73 @@ class TestGithubOrgClient(unittest.TestCase):
         )
 
 
-@parameterized_class(('org_payload', 'repos_payload',
-                      'expected_repos', 'apache2_repos'), TEST_PAYLOAD)
+@parameterized_class(
+    ("org_payload", "repos_payload", "expected_repos", "apache2_repos"),
+    TEST_PAYLOAD
+)
 class TestIntegrationGithubOrgClient(unittest.TestCase):
-    """Integration tests for the GithubOrgClient class."""
+    """Integration tests for the `GithubOrgClient` class using fixtures.
+
+    This class tests the integration of the `GithubOrgClient` class methods
+    with the provided fixtures to ensure correct behavior of the public
+    repositories and license filtering functionalities.
+    """
 
     @classmethod
     def setUpClass(cls):
-        """Sets up mock responses for integration tests."""
-        cls.get_patcher = patch("requests.get")
-        cls.mock_get = cls.get_patcher.start()
+        """Sets up the mock patcher before running the tests.
 
-        def side_effect(url):
-            """Provides mock responses based on the requested URL.
+        This method is called once before any tests are run in the class.
+        It configures the mock response for `requests.get`
+        to return predefined
+        payloads based on the URL.
+        """
+        config = {
+            "return_value.json.side_effect": [
+                cls.org_payload,
+                cls.repos_payload,
+                cls.org_payload,
+                cls.repos_payload,
+            ]
+        }
+        cls.get_patcher = patch("requests.get", **config)
+        cls.mock = cls.get_patcher.start()
 
-            Args:
-                url (str): The URL being requested.
+    def test_public_repos(self):
+        """Tests the `public_repos` method of `GithubOrgClient`.
 
-            Returns:
-                MockResponse: Mocked response object with JSON data.
-            """
-            class MockResponse:
-                def __init__(self, json_data):
-                    self.json_data = json_data
+        This test verifies that the `public_repos` method returns the expected
+        list of repositories. It also checks that calling `public_repos` with
+        an invalid license returns an empty list.
+        """
+        test_class = GithubOrgClient("google")
 
-                def json(self):
-                    return self.json_data
+        self.assertEqual(test_class.org, self.org_payload)
+        self.assertEqual(test_class.repos_payload, self.repos_payload)
+        self.assertEqual(test_class.public_repos(), self.expected_repos)
+        self.assertEqual(test_class.public_repos("XLICENSE"), [])
+        self.mock.assert_called()
 
-            if url.endswith("/orgs/google"):
-                return MockResponse(cls.org_payload)
-            elif url.endswith("/orgs/google/repos"):
-                return MockResponse(cls.repos_payload)
-            else:
-                return None
+    def test_public_repos_with_license(self):
+        """Tests the `public_repos` method of `GithubOrgClient`
+        with a license filter.
+        This test verifies that the `public_repos` method returns the expected
+        list of repositories filtered by the specified license. It also checks
+        the behavior when an invalid license is provided.
+        """
+        test_class = GithubOrgClient("google")
 
-        cls.mock_get.side_effect = side_effect
+        self.assertEqual(test_class.public_repos(), self.expected_repos)
+        self.assertEqual(test_class.public_repos("XLICENSE"), [])
+        self.assertEqual(test_class.public_repos("apache-2.0"),
+                         self.apache2_repos)
+        self.mock.assert_called()
 
     @classmethod
     def tearDownClass(cls):
-        """Cleans up the mock patcher after tests."""
+        """Cleans up the mock patcher after all tests have run.
+
+        This method is called once after all tests in the class have finished.
+        It stops the patcher for `requests.get` to clean up any modifications.
+        """
         cls.get_patcher.stop()
-
-    def test_public_repos(self):
-        """Integration test for `public_repos` method with mocked data.
-
-        Asserts:
-            The `public_repos` method returns the expected repositories.
-        """
-        github_org_client = GithubOrgClient("google")
-        self.assertEqual(github_org_client.public_repos(), self.expected_repos)
-
-    def test_public_repos_with_license(self):
-        """Integration test for `public_repos` method with license filter.
-        """
-        github_org_client = GithubOrgClient("google")
-        self.assertEqual(github_org_client.public_repos(license="apache-2.0"),
-                         self.apache2_repos)
