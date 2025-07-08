@@ -2,7 +2,7 @@
 import mysql.connector
 
 
-def streams_users():
+def stream_users():
     """Fetches data from table user_data row by row."""
     try:
         connection = mysql.connector.connect(
