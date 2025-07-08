@@ -63,9 +63,8 @@ def create_table(connection):
         print(f"Error: {error}")
     
     finally:
-        cursor.close()            
-    
-   
+        cursor.close()
+
 def insert_data(connection, data):
     """Inserts data in the database if it doesn't exist (checked by email)."""
     try:
