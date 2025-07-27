@@ -17,3 +17,16 @@ class TestAccessNestedMap(unittest.TestCase):
     def test_access_nested_map(self, nested_map, path , expected):
         """Test Case"""
         self.assertEqual(access_nested_map(nested_map, path), expected)
+        
+    
+    @parameterized.expand([
+        ({}, ("a",)),
+        ({"a": 1}, ("a", "b")),   
+    ])
+    def test_access_nested_map_except(self, nested_map, path):
+        with self.assertRaises(KeyError) as context:
+            access_nested_map(nested_map, path)
+        # Ensure the error message matches the first missing key
+        self.assertEqual(str(context.exception), repr(path[-1]))
+        
+        
