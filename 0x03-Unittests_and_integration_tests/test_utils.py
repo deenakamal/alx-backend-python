@@ -30,23 +30,30 @@ class TestAccessNestedMap(unittest.TestCase):
         
     
     
-    class TestGetJson(unittest.TestCase):
-        """
-        Test case for the get_json function in utils.py.
-        Ensures it calls requests.get and returns the correct JSON payload
-        without performing a real HTTP request.
-        """
-        @parameterized.expand([
-            ("http://example.com", {"payload": True}),
-            ("http://holberton.io", {"payload": False}),
-        ])
-        @patch('utils.requests.get')
-        def test_get_json(self, test_url, test_payload, mock_get):
-            """ Create a mock responde with .json() returnin test_playload."""
-            mock_response = Mock() # create mock object for response
-            mock_response.json.return_value = test_payload #ser .json() return value
-            mock_get.return_value = mock_response # request.get() return this mock
-            
-            result = get_json(test_url)
-            mock_get.assert_called_once_with(test_url)
-            self.assertEqual(result, test_payload)  
+class TestGetJson(unittest.TestCase):
+    """
+    Test case for the get_json function in utils.py.
+    Ensures it calls requests.get and returns the correct JSON payload
+    without performing a real HTTP request.
+    """
+
+    @parameterized.expand([
+        ("http://example.com", {"payload": True}),
+        ("http://holberton.io", {"payload": False}),
+    ])
+    @patch('utils.requests.get')
+    def test_get_json(self, test_url, test_payload, mock_get):
+        """Create a mock response with .json() returning test_payload."""
+        # Step 1: Create mock response object
+        mock_response = Mock()
+        mock_response.json.return_value = test_payload
+        mock_get.return_value = mock_response
+
+        # Step 2: Call function under test
+        result = get_json(test_url)
+
+        # Step 3: Verify requests.get was called correctly
+        mock_get.assert_called_once_with(test_url)
+
+        # Step 4: Verify return value is as expected
+        self.assertEqual(result, test_payload)
