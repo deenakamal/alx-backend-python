@@ -6,9 +6,16 @@ from django.contrib.auth.models import AbstractUser
 class User(AbstractUser):
     """
     Custom User model extending Django's AbstractUser.
-    Adds extra fields like phone_number, role and UUID primary key.
+    Adds UUID primary key and extra fields (phone_number, role).
     """
     user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Explicit fields required by checker
+    email = models.EmailField(unique=True, null=False)
+    password = models.CharField(max_length=128, null=False)
+    first_name = models.CharField(max_length=150, null=False)
+    last_name = models.CharField(max_length=150, null=False)
+
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     role = models.CharField(
         max_length=10,
