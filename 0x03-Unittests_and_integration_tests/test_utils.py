@@ -4,8 +4,9 @@ This module contains unit tests for the following utility functions:
 - `access_nested_map`: Accesses a nested map using a path of keys."""
 
 import unittest
-from utils import access_nested_map
+from utils import access_nested_map, get_json
 from parameterized import parameterized
+from unittest.mock import patch, Mock
 
 class TestAccessNestedMap(unittest.TestCase):
     """Create a TestAccessNestedMap class that inherits from unittest.TestCase"""
@@ -27,4 +28,25 @@ class TestAccessNestedMap(unittest.TestCase):
         with self.assertRaises(KeyError) as context:
             access_nested_map(nested_map, path)
         
-        
+    
+    
+    class TestGetJson(unittest.TestCase):
+        """
+        Test case for the get_json function in utils.py.
+        Ensures it calls requests.get and returns the correct JSON payload
+        without performing a real HTTP request.
+        """
+        @parameterized.expand([
+            ("http://example.com", {"payload": True}),
+            ("http://holberton.io", {"payload": False}),
+        ])
+        @patch('utils.requests.get')
+        def test_get_json(self, test_url, test_playload, mock_get):
+            """ Create a mock responde with .json() returnin test_playload."""
+            mock_response = Mock() # create mock object for response
+            mock_response.json.return_value = test_playload #ser .json() return value
+            mock_get.return_value = mock_response # request.get() return this mock
+            
+            result = get_json(test_url)
+            mock_get.assert_called_once_with(test_url)
+            self.assertEqual(result, test_playload)  
