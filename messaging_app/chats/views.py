@@ -1,19 +1,16 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, permissions, status
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
-from .permissions import IsParticipantOfConversation  # <-- import custom permission
+from .permissions import IsParticipantOfConversation
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing conversations.
-    """
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
-    # Apply custom permission
-    permission_classes = [IsParticipantOfConversation]
+    permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]  # Keep both
     filter_backends = [filters.SearchFilter]
     search_fields = ['participants__email']
 
@@ -24,15 +21,24 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
 
 class MessageViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing messages.
-    """
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    # Apply custom permission
-    permission_classes = [IsParticipantOfConversation]
+    permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]  # Keep both
     filter_backends = [filters.SearchFilter]
     search_fields = ['message_body']
+
+    def get_queryset(self):
+        """
+        Restrict messages to participants of the conversation.
+        """
+        conversation_id = self.kwargs.get("conversation_id")
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+
+        # Check participant
+        if self.request.user not in conversation.participants.all():
+            raise PermissionDenied(detail="You are not a participant of this conversation.")
+
+        return Message.objects.filter(conversation=conversation)
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
