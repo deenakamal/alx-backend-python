@@ -1,7 +1,9 @@
-from rest_framework import viewsets, permissions, status, filters
+from rest_framework import viewsets, filters
 from rest_framework.response import Response
+from rest_framework import status
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
+from .permissions import IsParticipantOfConversation  # <-- import custom permission
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -10,8 +12,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
     """
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter] 
+    # Apply custom permission
+    permission_classes = [IsParticipantOfConversation]
+    filter_backends = [filters.SearchFilter]
     search_fields = ['participants__email']
 
     def perform_create(self, serializer):
@@ -26,7 +29,8 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # Apply custom permission
+    permission_classes = [IsParticipantOfConversation]
     filter_backends = [filters.SearchFilter]
     search_fields = ['message_body']
 
