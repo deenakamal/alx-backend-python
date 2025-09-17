@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import JsonResponse
 
 
 User = get_user_model()
@@ -25,47 +26,25 @@ def delete_user(request):
 
 
 @login_required
-def threaded_conversation(request):
-    """
-    Fetch top-level messages for the logged-in user (as sender or receiver)
-    along with their replies.
-    Uses select_related and prefetch_related to optimize queries.
-    """
-    user = request.user
-
-    # Fetch top-level messages where the current user is sender or receiver
-    top_messages = Message.objects.filter(
-        Q(sender=user) | Q(receiver=user),
+def threaded_conversations(request):
+    # Fetch root messages (no parent) for current user
+    root_messages = Message.objects.filter(
         parent_message__isnull=True
+    ).filter(
+        Q(sender=request.user) | Q(receiver=request.user)
     ).select_related('sender', 'receiver') \
      .prefetch_related('replies__sender', 'replies__receiver')
 
-    # Recursive function to get all replies
-    def get_replies(message):
-        return [
-            {
-                'id': reply.id,
-                'sender': reply.sender.username,
-                'receiver': reply.receiver.username,
-                'content': reply.content,
-                'timestamp': reply.timestamp,
-                'replies': get_replies(reply)
-            }
-            for reply in message.replies.all()
-        ]
+    # Recursive function to build nested thread
+    def build_thread(message):
+        return {
+            "id": message.id,
+            "sender": message.sender.username,
+            "receiver": message.receiver.username,
+            "content": message.content,
+            "timestamp": message.timestamp,
+            "replies": [build_thread(reply) for reply in message.replies.all()]
+        }
 
-    # Prepare conversation data for template
-    conversation_data = []
-    for msg in top_messages:
-        conversation_data.append({
-            'id': msg.id,
-            'sender': msg.sender.username,
-            'receiver': msg.receiver.username,
-            'content': msg.content,
-            'timestamp': msg.timestamp,
-            'replies': get_replies(msg)
-        })
-
-    return render(request, 'messaging/threaded_conversation.html', {
-        'conversation_data': conversation_data
-    })
+    data = [build_thread(msg) for msg in root_messages]
+    return JsonResponse(data, safe=False)
