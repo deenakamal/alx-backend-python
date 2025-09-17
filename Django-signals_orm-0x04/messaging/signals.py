@@ -15,12 +15,12 @@ def create_notification(sender, instance, created, **kwargs):
 @receiver(pre_save, sender=Message)
 def save_message_history(sender, instance, **kwargs):
     if instance.pk:
-       
         old_message = Message.objects.get(pk=instance.pk)
         if old_message.content != instance.content:
-            
+           
             MessageHistory.objects.create(
                 message=instance,
-                old_content=old_message.content
+                old_content=old_message.content,
+                edited_by=instance.sender 
             )
-            instance.edited = True 
+            instance.edited = True
