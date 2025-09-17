@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
+from .models import Message
 
 
 User = get_user_model()
@@ -54,9 +55,13 @@ def threaded_conversations(request):
 def unread_inbox(request):
     """
     Display only unread messages for the logged-in user.
+    Optimized with .only() to fetch only necessary fields.
     """
     user = request.user
-    unread_messages = Message.unread.unread_for_user(user)  # ← استخدام custom manager
+
+    # Fetch unread messages using custom manager
+    # Apply .only() here to optimize query
+    unread_messages = Message.unread.unread_for_user(user).only('id', 'sender', 'content', 'timestamp', 'read')
 
     return render(request, 'messaging/unread_inbox.html', {
         'unread_messages': unread_messages
