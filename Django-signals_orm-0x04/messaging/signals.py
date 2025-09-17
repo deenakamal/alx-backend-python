@@ -23,4 +23,5 @@ def save_message_history(sender, instance, **kwargs):
                 old_content=old_message.content,
                 edited_by=instance.sender 
             )
+            
             instance.edited = True
