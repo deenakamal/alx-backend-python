@@ -23,26 +23,22 @@ def delete_user(request):
     return render(request, "messaging/delete_user.html")  # Confirmation page
 
 
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from .models import Message
-
 @login_required
 def threaded_conversation(request):
     """
     Fetch top-level messages for the logged-in user (as sender or receiver)
-    along with their replies, using select_related and prefetch_related
-    to optimize database queries. Display threaded conversation.
+    along with their replies.
+    Uses select_related and prefetch_related to optimize queries.
     """
     user = request.user
 
-    # Fetch messages where the current user is sender or receiver
+    # Fetch top-level messages where the current user is either sender or receiver
     top_messages = Message.objects.filter(
         sender=user, parent_message__isnull=True
     ).select_related('sender', 'receiver') \
      .prefetch_related('replies__sender', 'replies__receiver')
 
-    # Recursive function to get all replies
+    # Recursive function to get all replies in a threaded format
     def get_replies(message):
         return [
             {
@@ -56,6 +52,7 @@ def threaded_conversation(request):
             for reply in message.replies.all()
         ]
 
+    # Prepare conversation data for template
     conversation_data = []
     for msg in top_messages:
         conversation_data.append({
