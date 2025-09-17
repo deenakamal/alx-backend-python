@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
 from .models import Message
-
+from django.views.decorators.cache import cache_page
 
 User = get_user_model()
 
@@ -66,3 +66,33 @@ def unread_inbox(request):
     return render(request, 'messaging/unread_inbox.html', {
         'unread_messages': unread_messages
     })
+    
+
+@login_required
+@cache_page(60)
+def conversation_messages(request, conversation_id):
+    """
+    Returns messages in a specific conversation (threaded) as JSON.
+    Cached for 60 seconds.
+    """
+    user = request.user
+    # Fetch root messages for this conversation
+    root_messages = Message.objects.filter(
+        parent_message__isnull=True,
+        receiver=user
+    ).filter(Q(sender=user) | Q(receiver=user)).select_related('sender', 'receiver') \
+      .prefetch_related('replies__sender', 'replies__receiver')
+
+    def build_thread(message):
+        return {
+            "id": message.id,
+            "sender": message.sender.username,
+            "receiver": message.receiver.username,
+            "content": message.content,
+            "timestamp": message.timestamp.isoformat(),
+            "read": message.read,
+            "replies": [build_thread(reply) for reply in message.replies.all()]
+        }
+
+    data = [build_thread(msg) for msg in root_messages]
+    return JsonResponse(data, safe=False)
