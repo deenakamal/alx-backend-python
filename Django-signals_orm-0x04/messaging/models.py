@@ -1,22 +1,9 @@
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
+from .managers import UnreadMessagesManager
 
 
-
-class UnreadMessagesManager(models.Manager):
-    """
-    Custom manager to filter unread messages for a specific user.
-    """
-    def for_user(self, user):
-        return self.filter(
-            receiver=user,  # messages where the user is the receiver
-            read=False       # only unread messages
-        ).only('id', 'sender', 'content', 'timestamp', 'read')  # fetch only needed fields
-
-# -----------------------------
-# Message Model
-# -----------------------------
 class Message(models.Model):
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -31,9 +18,7 @@ class Message(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     edited = models.BooleanField(default=False)
-    read = models.BooleanField(default=False)  # ← added field
-
-    # Self-referential FK for threaded messages
+    read = models.BooleanField(default=False)
     parent_message = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
@@ -43,12 +28,12 @@ class Message(models.Model):
     )
 
     # Managers
-    objects = models.Manager()  # default
+    objects = models.Manager()  # default manager
     unread = UnreadMessagesManager()  # custom manager
 
     def __str__(self):
         return f"Message from {self.sender} to {self.receiver}"
-
+    
 # -----------------------------
 # Notification Model
 # -----------------------------

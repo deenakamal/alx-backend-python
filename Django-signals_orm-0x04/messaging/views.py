@@ -48,3 +48,16 @@ def threaded_conversations(request):
 
     data = [build_thread(msg) for msg in root_messages]
     return JsonResponse(data, safe=False)
+
+
+@login_required
+def unread_inbox(request):
+    """
+    Display only unread messages for the logged-in user.
+    """
+    user = request.user
+    unread_messages = Message.unread.unread_for_user(user)  # ← استخدام custom manager
+
+    return render(request, 'messaging/unread_inbox.html', {
+        'unread_messages': unread_messages
+    })
