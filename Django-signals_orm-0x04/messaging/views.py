@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 
 
 User = get_user_model()
@@ -32,13 +33,14 @@ def threaded_conversation(request):
     """
     user = request.user
 
-    # Fetch top-level messages where the current user is either sender or receiver
+    # Fetch top-level messages where the current user is sender or receiver
     top_messages = Message.objects.filter(
-        sender=user, parent_message__isnull=True
+        Q(sender=user) | Q(receiver=user),
+        parent_message__isnull=True
     ).select_related('sender', 'receiver') \
      .prefetch_related('replies__sender', 'replies__receiver')
 
-    # Recursive function to get all replies in a threaded format
+    # Recursive function to get all replies
     def get_replies(message):
         return [
             {
