@@ -2,14 +2,22 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
 
+
+
+class UnreadMessagesManager(models.Manager):
+    """
+    Custom manager to filter unread messages for a specific user.
+    """
+    def for_user(self, user):
+        return self.filter(
+            receiver=user,  # messages where the user is the receiver
+            read=False       # only unread messages
+        ).only('id', 'sender', 'content', 'timestamp', 'read')  # fetch only needed fields
+
 # -----------------------------
 # Message Model
 # -----------------------------
 class Message(models.Model):
-    """
-    Message model to store messages between users.
-    Supports threaded conversations using a self-referential foreign key.
-    """
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -23,8 +31,9 @@ class Message(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     edited = models.BooleanField(default=False)
+    read = models.BooleanField(default=False)  # ← added field
 
-    # Self-referential FK for replies (threaded messages)
+    # Self-referential FK for threaded messages
     parent_message = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
@@ -32,6 +41,10 @@ class Message(models.Model):
         blank=True,
         related_name='replies'
     )
+
+    # Managers
+    objects = models.Manager()  # default
+    unread = UnreadMessagesManager()  # custom manager
 
     def __str__(self):
         return f"Message from {self.sender} to {self.receiver}"
@@ -76,3 +89,5 @@ class MessageHistory(models.Model):
 
     def __str__(self):
         return f"History of Message {self.message.id} at {self.edited_at}"
+
+
