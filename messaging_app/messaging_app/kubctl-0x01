@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Check if kubectl is installed
+if ! command -v kubectl &> /dev/null
+then
+    echo "kubectl could not be found. Please install it first."
+    exit 1
+fi
+
+# Check if wrk is installed
+if ! command -v wrk &> /dev/null
+then
+    echo "wrk could not be found. Please install it first."
+    exit 1
+fi
+
+# Scale the Django deployment to 3 replicas
+echo "Scaling messaging-app deployment to 3 replicas..."
+kubectl scale deployment messaging-app-deployment --replicas=3
+
+# Wait a few seconds for pods to come up
+sleep 5
+
+# Verify that multiple pods are running
+echo "Listing pods..."
+kubectl get pods -l app=messaging-app
+
+# Perform basic load testing with wrk
+# Change URL if your app is exposed differently
+echo "Performing load testing using wrk..."
+wrk -t2 -c10 -d10s http://localhost:8000/
+
+# Monitor resource usage
+echo "Displaying resource usage..."
+kubectl top pods
