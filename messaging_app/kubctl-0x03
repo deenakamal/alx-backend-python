@@ -1,0 +1,29 @@
+#!/bin/bash
+
+APP_URL="http://localhost:8000/api/"   # Update path as needed
+
+# Apply the updated deployment
+echo "Applying blue_deployment.yaml with new image..."
+kubectl apply -f blue_deployment.yaml
+
+# Trigger rolling update and monitor progress
+echo "Monitoring rolling update..."
+kubectl rollout status deployment/messaging-app-blue
+
+# Test for downtime using curl
+echo "Testing app for downtime..."
+for i in {1..20}
+do
+    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL)
+    if [ "$RESPONSE" -ne 200 ]; then
+        echo "Request $i failed with status code: $RESPONSE"
+    else
+        echo "Request $i successful."
+    fi
+    sleep 1
+done
+
+# Verify the update is complete
+echo "Current pods after rolling update:"
+kubectl get pods -l app=messaging-app,version=blue
+
