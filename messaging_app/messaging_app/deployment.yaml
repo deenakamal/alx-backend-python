@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: messaging-app-deployment
+  labels:
+    app: messaging-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: messaging-app
+  template:
+    metadata:
+      labels:
+        app: messaging-app
+    spec:
+      containers:
+        - name: messaging-app
+          image: messaging_app_image:latest   # Replace with your built image name
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MYSQL_USER
+              value: "messaging_user"
+            - name: MYSQL_PASSWORD
+              value: "securepassword"
+            - name: MYSQL_DB
+              value: "messaging_db"
+            - name: MYSQL_HOST
+              value: "db"   # If you have a MySQL service running in K8s
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: messaging-app-service
+spec:
+  selector:
+    app: messaging-app
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
