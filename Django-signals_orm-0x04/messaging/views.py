@@ -23,22 +23,27 @@ def delete_user(request):
     return render(request, "messaging/delete_user.html")  # Confirmation page
 
 
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from .models import Message
+
+@login_required
 def threaded_conversation(request):
     """
-    Fetch all top-level messages and their replies efficiently,
-    using select_related and prefetch_related to reduce DB queries.
-    Display in a threaded format.
+    Fetch top-level messages for the logged-in user (as sender or receiver)
+    along with their replies, using select_related and prefetch_related
+    to optimize database queries. Display threaded conversation.
     """
-    # Fetch top-level messages (messages without a parent)
-    top_messages = Message.objects.filter(parent_message__isnull=True) \
-        .select_related('sender', 'receiver') \
-        .prefetch_related('replies__sender', 'replies__receiver')
+    user = request.user
 
-    # Recursive function to get all replies for each message
+    # Fetch messages where the current user is sender or receiver
+    top_messages = Message.objects.filter(
+        sender=user, parent_message__isnull=True
+    ).select_related('sender', 'receiver') \
+     .prefetch_related('replies__sender', 'replies__receiver')
+
+    # Recursive function to get all replies
     def get_replies(message):
-        """
-        Recursively get replies for a message.
-        """
         return [
             {
                 'id': reply.id,
@@ -46,12 +51,11 @@ def threaded_conversation(request):
                 'receiver': reply.receiver.username,
                 'content': reply.content,
                 'timestamp': reply.timestamp,
-                'replies': get_replies(reply)  # recursive call
+                'replies': get_replies(reply)
             }
             for reply in message.replies.all()
         ]
 
-    # Prepare threaded conversation data
     conversation_data = []
     for msg in top_messages:
         conversation_data.append({
